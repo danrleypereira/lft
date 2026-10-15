@@ -1,41 +1,32 @@
 # pca_routing — open items
 
-## Postponed
+## Done
 
-- **React PoC for the PCA graph visualization — now scoped as the class
-  presentation demo, not a REIN console stepping stone.** Vite + React
-  Router app, real RNP topology (reuse `graph.py::load_rnp_topology`, same
-  27 nodes/44 edges, plotted on a Brazil map background rather than a
-  force-directed layout), with:
-  - a picker for a **source and target node**,
-  - a side-by-side result panel showing each algorithm's path, cost, hops,
-    and `comparisons`/`relaxations` counters (straight from `PathResult`) —
-    for Dijkstra, Bellman-Ford, and BFS,
-  - the chosen path for each algorithm overlaid on the map in its own color.
-
-  **Refinement to build in from the start, not bolt on later:** a
-  single (source, target) pair makes ILP and Dijkstra draw the *identical*
-  path (per `FINDINGS.md`, ILP's per-target objective reduces to plain
-  shortest path with only one flow) — so showing "5 algorithms" on one pair
-  would visually undersell the whole point. Instead let the UI hold **two
-  concurrent (source, target) pairs** on the same topology, with a toggle:
-  "naive" (Dijkstra solved independently per pair — can overload a shared
-  link) vs. "coordinated" (LP/ILP solved jointly over both). The two modes
-  visibly diverge exactly where the pairs' paths would share a
-  capacity-limited link — this is the live, visual version of
-  `assignment/complexity/why-np-hard.md`'s argument, not just a prettier
-  path-finder. Worth the extra scope: it's what actually proves the
-  framework (LSP: same `find_path` call site, swap `PathFinder` subclass)
-  *and* sells the advanced-scenario content to the class in one artifact.
+- **React PoC for the PCA graph visualization, scoped as the class
+  presentation demo.** Done 2026-10-15, branch `pca/react-poc` @ `15cf019`
+  (fork only, no PR/issue). `pca_routing/web/`: Vite + React Router, TS ports
+  of Dijkstra/Bellman-Ford/BFS verified against the Python originals over all
+  351 RNP pairs (`src/lib/lib.test.ts`, 1055 vitest cases — `tsc --noEmit` and
+  `vite build` both clean, independently re-run and confirmed, not just taken
+  on the builder's word). Two tabs: **Algorithms** (one pair, all three
+  algorithms side by side with cost/hops/comparisons/relaxations, each path
+  its own color) and **Two flows** (two concurrent demand-bearing pairs,
+  naive-Dijkstra-per-pair vs. an exact coordinated joint allocator —
+  `src/lib/joint.ts` enumerates simple paths and picks the capacity-respecting
+  pair minimizing total cost, the true unsplittable-two-commodity optimum for
+  graphs this size, not an LP relaxation). Default demo (AL→SP + DF→SP,
+  60 Mbit each): naive overloads link DF–SP (capacity 20); coordinated
+  reroutes flow B via MG–RJ, +10.5 ms, feasible. Run: `cd pca_routing/web &&
+  npm i && npm run dev`.
+  Open: per-member contribution note aside, this closes the "prove the
+  framework to the class" goal from `FINDINGS.md`/`why-np-hard.md` — the
+  naive/coordinated divergence is the live version of the NP-hardness
+  argument, not just a prettier path-finder.
 
   Doubled as the stack-validation step for `REIN/console/MIGRATION-PLAN.md`'s
   Phase 0 (the "RNP Backbone Atlas" artifact —
-  https://claude.ai/artifact/ECnXExrjP8j6B3enD3pPpA — already prototypes the
-  map/interaction side in plain JS+D3; porting it to React+Router was that
-  plan, still true, just no longer the primary reason to build this).
-  **Postponed 2026-10-15** — not urgent for the graded deliverable itself
-  (the assignment doesn't require a UI); picked up next once the report/
-  slides text itself is written.
+  https://claude.ai/artifact/ECnXExrjP8j6B3enD3pPpA — prototyped the
+  map/interaction side in plain JS+D3 first; this is the React+Router port).
 
 ## Not yet done (tracked in `DESIGN.md` already, repeated here for visibility)
 
@@ -44,8 +35,11 @@
   Needs `lft-vm` up and ONOS running; deliberately kept separate from the
   graded code (`pca_routing/` imports nothing from `profissa_lft`/
   `onos_topologies` on purpose).
-- Writing the actual report (`assignment/report/report.tex`) and slides
-  (`assignment/slides/outline.md`) content — currently structure/pointers
-  only, see each file's own TODOs.
+- `assignment/report/report.tex` + `report.pdf`: done (branch `pca/report`,
+  full content, group authorship) — one open item inside it,
+  `% TODO(group)` for the per-member contribution breakdown, needs the
+  group's own input, not a guess.
+- Slides (`assignment/slides/outline.md`) content — still structure/pointers
+  only, deliberately left for after the report/HTML/demo are reviewed.
 - Optional: a binary-heap Dijkstra (`O((V+E) log V)`) as a documented
   "optimization" subsection, once the base Θ(V²) comparison is written up.
