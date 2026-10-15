@@ -107,6 +107,61 @@ something real and already running in this stack:
 | `DijkstraPathFinder` | What `ospf` mode already does (RFC 2328), and what `cdn_qoe.py`'s ILP is *provably equivalent to*, per-target |
 | `BellmanFordPathFinder` | The required literature comparison for the assignment; not currently used anywhere in REIN itself |
 
+## Advanced scenario — why Dijkstra (and this package, as built) stop being a good fit
+
+The single-commodity reduction above holds only because today's deployer
+routes one client's intent at a time, independently, as it arrives via
+chat. The moment multiple clients must be routed **together**, under a
+**shared** link-capacity budget, the problem changes shape entirely - and
+this is worth presenting as its own scenario, not folded into the main
+comparison, because the fix is not "turn the ILP back on."
+
+**Why independent per-client Dijkstra breaks.** Dijkstra finds the cheapest
+path for one flow; it has no notion of a link's remaining capacity or of a
+second flow wanting the same link. Route 10 clients independently and
+Dijkstra gives all 10 the *identical* cheapest path if their endpoints are
+similar - dumping all their traffic onto one link, saturating it, while
+parallel links sit idle. Re-running Dijkstra per client sequentially
+("give client 1 its best path, subtract its usage, route client 2 against
+what's left...") doesn't fix this either: whichever client is routed first
+gets the true optimum and may consume a bottleneck link that a later
+client then needs, forcing a detour it wouldn't have needed had the first
+client been routed slightly less optimally. The *order* clients happen to
+arrive in silently determines the outcome - not something a research
+testbed should want to depend on.
+
+**Why this is unsplittable multi-commodity flow, not just "more Dijkstra
+calls".** The real problem becomes: given all clients' (source, candidate
+servers) pairs at once, and a capacity on every link, choose one path per
+client such that no link's total assigned traffic exceeds its capacity,
+minimizing total cost. That's the multi-commodity flow problem, and
+because the assignment requires *one whole path per client* (no splitting
+a client's own traffic across multiple paths), it's the NP-hard
+*unsplittable* variant - this is where ILP (or an equivalent combinatorial
+heuristic) earns its place, for real, not as over-engineering. (Aside for
+rigor: if splitting one client's own traffic across several paths were
+ever acceptable, the linear-programming *relaxation* of the same problem,
+with no integer constraints, is solvable in polynomial time and already
+gives the optimal fractional answer - ILP only re-enters because the
+answer must be one undivided path per client.)
+
+**Why this doesn't become a fourth `PathFinder` subclass.** Its signature
+isn't `find_path(graph, source, target) -> PathResult` - it needs *every*
+active client's (source, candidate-targets) at once, plus per-edge
+capacities, and returns a *set* of paths, not one. Forcing it into the
+`PathFinder` hierarchy would mean either quietly requiring more than the
+interface promises its callers, or quietly changing what it hands back -
+exactly the kind of substitutability violation `algorithms/base.py`
+already calls out for `supports_negative_weights`. The honest design is a
+second, separate interface one level up (a `SequentialDijkstraAllocator`
+that just calls `PathFinder` once per client - today's actual, uncoordinated
+behavior, made explicit - alongside an `ILPAllocator` that extends
+`cdn_qoe.py`'s existing formulation with real `Σ flow(i,j) ≤ capacity(i,j)`
+constraints), with the deployer's own policy choosing between them
+(e.g. per-client while no contention is detected, joint re-optimization
+once concurrent active flows cross some threshold) - a decision for
+whoever owns `cdn_qoe.py` to weigh in on, not something to build silently.
+
 ## Honest verdict
 
 Not "just useful for the assignment" and not "a ready-to-merge replacement"
@@ -115,8 +170,10 @@ issue asks for exactly this; the current implementation already meets
 the issue's letter but via much heavier machinery than the problem (as
 currently scoped) requires; and this package's `DijkstraPathFinder` is a
 proven drop-in for that inner loop *if* the single-commodity assumption
-holds going forward. Turning that into an actual PR is separate work -
-would need: a live ONOS-REST-based topology loader (cleaner than the
-Karaf-CLI-scraping approach, not just a port of it), the multi-target
-wrapper, and signoff from whoever owns `cdn_qoe.py` on the
+holds going forward - which, as shown above, is a real assumption with a
+real expiration date, not a technicality. Turning the single-client case
+into an actual PR is separate work - would need: a live ONOS-REST-based
+topology loader (cleaner than the Karaf-CLI-scraping approach, not just a
+port of it), the multi-target wrapper, and signoff from whoever owns
+`cdn_qoe.py` on the
 single-vs-multi-commodity question above.

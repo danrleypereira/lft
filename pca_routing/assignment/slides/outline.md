@@ -37,7 +37,26 @@ material pointers are what to pull onto each slide, not what to say.
     every instance tested (`tests/test_algorithms.py`); frame this as a
     *result*, not a testing footnote — it's evidence the two
     implementations are correct relative to each other.
-12. **Conclusion** — what was learned, what was hard. Last slide.
+12. **Real-world application** — this isn't a toy problem: REIN (the real
+    IBN research project this data comes from) has an open issue asking for
+    exactly this function, and its current solver turns out to be
+    *mathematically equivalent*, per-client, to what `DijkstraPathFinder`
+    already computes — just via a much heavier ILP solver. `FINDINGS.md` →
+    "The actual finding".
+13. **Advanced scenario — where Dijkstra stops being a good fit** — the
+    honest limit, presented as a feature of understanding the problem, not
+    a weakness of the work: route ONE client at a time and Dijkstra is
+    provably right; route MANY clients sharing the same links and
+    independent Dijkstra calls can saturate one link while others sit idle
+    (show the "10 clients, same best path" case from `FINDINGS.md`'s
+    advanced-scenario section). This is unsplittable multi-commodity flow —
+    NP-hard, genuinely needs ILP (or a heuristic), not a shortcoming of this
+    implementation. Also the LSP payoff, stated explicitly: this new
+    problem does NOT become a fourth `PathFinder` subclass (different
+    signature, different return shape) — it's a separate interface one
+    level up, exactly the discipline `algorithms/base.py` already argues
+    for.
+14. **Conclusion** — what was learned, what was hard. Last slide.
 
 ## Format
 
