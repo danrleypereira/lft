@@ -385,16 +385,30 @@ def build_table(payload: str, ctx: Ctx, number: int):
             ncols = 1
             if mm:
                 ncols, cell = int(mm.group(1)), mm.group(3)
-                spans.append(("SPAN", (c, r), (c + ncols - 1, r)))
             al = cols[c][0] if c < len(cols) else "l"
             st = ParagraphStyle("c", parent=S["cell"], alignment={"l": 0, "r": 2, "c": 1, "p": 0}[al])
             if mm:
                 st = ParagraphStyle("c", parent=S["cell"], alignment=1)
-            out_row.append(Paragraph(inline(cell, ctx), st))
-            plain_row.append(cell)
-            for _ in range(ncols - 1):
-                out_row.append("")
-                plain_row.append("")
+            # no SPAN (ReportLab drops rule commands around spanned rows): centre the text
+            # in the middle column of an odd-width group instead
+            assert ncols % 2 == 1, "multicolumn groups must span an odd number of columns"
+            if not mm:
+                out_row.append(Paragraph(inline(cell, ctx), st))
+                plain_row.append(cell)
+                c += 1
+                continue
+            for k in range(ncols):
+                centre = k == ncols // 2
+                if centre:  # plain string: never wraps, so it may overflow into its neighbours
+                    txt = re.sub(r"<[^>]+>", "", inline(cell, ctx))
+                    txt = txt.replace("&amp;", "&").replace("&lt;", "<").replace("&gt;", ">")
+                    out_row.append(txt)
+                    spans.append(("ALIGN", (c + k, r), (c + k, r), "CENTER"))
+                    spans.append(("FONTNAME", (c + k, r), (c + k, r), "Body"))
+                    spans.append(("FONTSIZE", (c + k, r), (c + k, r), 9))
+                else:
+                    out_row.append("")
+                plain_row.append(cell if centre else "")
             c += ncols
         data.append(out_row)
         plain.append(plain_row)
@@ -503,7 +517,7 @@ def build(tex_path: Path, pdf_path: Path) -> None:
         ctx.bib_numbers[k] = n
 
     title = " ".join(get_cmd(tex, "title").replace("\\\\", "<br/>").split())
-    authors = get_cmd(tex, "author").replace("\\and", "<br/>")
+    authors = get_cmd(tex, "author")
     date = get_cmd(tex, "date")
 
     body = re.sub(r"\\bibliography(style)?\{[^}]*\}", "", body)
@@ -513,7 +527,7 @@ def build(tex_path: Path, pdf_path: Path) -> None:
 
     story = [Spacer(1, 1.2 * cm),
              Paragraph(inline(title.replace("<br/>", "\\\\"), ctx), S["title"]),
-             Paragraph(esc(authors), S["author"]), Paragraph(esc(date), S["author"]), Spacer(1, 0.8 * cm)]
+             Paragraph(inline(authors.replace("\\and", "\\\\"), ctx), S["author"]), Paragraph(esc(date), S["author"]), Spacer(1, 0.8 * cm)]
     sec = sub = fig = tab = lst = 0
     for kind, payload in blocks:
         if kind == "text":
@@ -573,7 +587,7 @@ def build(tex_path: Path, pdf_path: Path) -> None:
 
     doc = SimpleDocTemplate(str(pdf_path), pagesize=A4, leftMargin=2.5 * cm, rightMargin=2.5 * cm,
                             topMargin=2.5 * cm, bottomMargin=2.5 * cm,
-                            title=re.sub(r"<[^>]+>|\\\\", " ", title).replace("--", "–"), author=re.sub(r"<[^>]+>", " ", authors))
+                            title=re.sub(r"<[^>]+>|\\\\", " ", title).replace("--", "–"), author="Group 7 (IBN Mess): Danrley Pereira, Gabriel Faria, Hugo Pereira Rezende")
     doc.build(story, onFirstPage=footer, onLaterPages=footer)
     print(f"wrote {pdf_path}  ({len(story)} flowables, {len(cited)} references)")
 
