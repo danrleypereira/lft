@@ -145,6 +145,47 @@ def load_rnp_topology(cost: str = "rtt") -> Graph:
     return g
 
 
+def load_from_console_api(testbed: dict, cost: str = "delay") -> Graph:
+    """Builds a Graph from REIN console's own `GET /api/testbed` response - the
+    LIVE running topology, not a static constants.py file. Proves the same
+    algorithms work unchanged against a completely different data source,
+    through nothing but Graph.add_edge(): this loader is the only thing that
+    knows the console's JSON shape, the three algorithms don't.
+
+    Node ids are each switch's `desc` (its PoP, e.g. "AC") rather than its
+    console id ("s0"), so results line up with load_rnp_topology()'s naming.
+
+    `cost`: "delay" (default) - the link's CURRENT one-way delay in ms, from
+    `link["now"]["delay"]`. This is NOT the same quantity as
+    load_rnp_topology()'s RTT_MATRIX: the console halves a link's measured
+    round-trip time to get the per-direction `tc netem delay` each way
+    actually uses (confirmed empirically: AC<->RO is "7.02ms" round-trip in
+    topologies/configs/rnp.py, 3.51ms one-way live - exactly half). Still a
+    genuine, independently-sourced latency, just a different unit; don't
+    compare its numbers directly against `load_rnp_topology()`'s without
+    doubling them first.
+    Also available: "rate" (current throughput in mbit, `now.rate`) and
+    "loss" (current packet loss, `now.loss`) for the same live link.
+    A link currently marked `now.down == True` is skipped entirely - this
+    loader reflects whatever the testbed's real state is *right now*,
+    degradations included, not its original baseline (`link["base"]`).
+    """
+    desc_by_id = {n["id"]: n.get("desc", n["id"]) for n in testbed["nodes"] if n["kind"] == "switch"}
+    g = Graph()
+    for node_id in desc_by_id.values():
+        g.add_node(node_id)
+    for link in testbed["links"]:
+        a, b = link["a"], link["b"]
+        if a not in desc_by_id or b not in desc_by_id:
+            continue  # a host-facing link, not a switch-to-switch one
+        now = link["now"]
+        if now.get("down"):
+            continue
+        w = {"delay": now["delay"], "rate": now["rate"], "loss": now["loss"]}[cost]
+        g.add_edge(desc_by_id[a], desc_by_id[b], float(w))
+    return g
+
+
 def random_graph(n: int, avg_degree: float = 3.0, weight_range: tuple[float, float] = (1.0, 50.0),
                   seed: int | None = None) -> Graph:
     """A random connected graph for the growing-|V| execution-time experiment.

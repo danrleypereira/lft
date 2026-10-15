@@ -5,6 +5,47 @@ real solver wholesale, but as a strong, defensible case that its *inner
 loop* is solving plain shortest path with much heavier machinery than it
 needs. Full reasoning below, because the honest answer has real caveats.
 
+## Live-data validation (not just the static constants.py files)
+
+`graph.load_from_console_api()` builds a `Graph` straight from REIN
+console's own `GET /api/testbed` - the actual running topology, pulled
+while a real `rnp` experiment's testbed was up inside `lft-vm`, deployer
+and supervisor both live, profiler reachable. The three algorithms needed
+**zero changes** to run against it; only a new loader was added, which is
+the entire point of keeping `Graph`'s surface to `add_edge`/`neighbors`.
+
+```
+LIVE graph: |V|=27 |E|=44
+dijkstra      hops=2 cost=14.430 path=BA -> MG -> RJ
+bellman_ford  hops=2 cost=14.430 path=BA -> MG -> RJ
+bfs           hops=2 cost=35.000 path=BA -> ES -> RJ
+correctness oracle (dijkstra == bellman_ford): True
+```
+
+Two things worth keeping for the report:
+
+- **The correctness oracle holds on live, not just static, data.** Same
+  property verified in `tests/test_algorithms.py` against the files, now
+  also true against a testbed actually running in Docker/ONOS.
+- **A subtler divergence than the static RJ→RR example**: here BFS and
+  Dijkstra/Bellman-Ford pick paths with the *same hop count* (2, either
+  way) but a 2.4× cost difference (35.0ms vs. 14.43ms). BFS doesn't fail by
+  taking more hops here - it fails by breaking a hop-count *tie* on
+  insertion order, arbitrarily, with no idea one of the tied options is far
+  cheaper. That's arguably a better illustration for the report than "more
+  hops = worse": even when hop count ties, hop count alone has nothing to
+  say about *which* tied path to prefer.
+
+One data-unit catch found in the process, worth documenting so a reader
+doesn't think the two loaders disagree: the console's live `now.delay` is
+a **one-way** per-direction delay (what it actually hands to `tc netem` on
+each direction of the link), while `topologies/configs/rnp.py`'s
+`RTT_MATRIX` is round-trip time - confirmed empirically (AC↔RO: 7.02ms
+round-trip in the static file, 3.51ms one-way live - exactly half). Not a
+bug, not a mismatch between the two loaders; just two different, each
+internally-consistent, units. Documented in `load_from_console_api()`'s
+own docstring so it isn't rediscovered the hard way later.
+
 ## The open issue
 
 `UnB-COMNET/lft#10`, "Função de Cálculo do melhor Caminho" ("Best-path

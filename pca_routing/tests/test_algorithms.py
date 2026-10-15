@@ -11,7 +11,14 @@ from ..algorithms.base import PathFinder, PathResult
 from ..algorithms.bellman_ford import BellmanFordPathFinder
 from ..algorithms.bfs import BFSPathFinder
 from ..algorithms.dijkstra import DijkstraPathFinder
-from ..graph import Graph, load_diamond_topology, load_rnp_topology, path_weight, random_graph
+from ..graph import (
+    Graph,
+    load_diamond_topology,
+    load_from_console_api,
+    load_rnp_topology,
+    path_weight,
+    random_graph,
+)
 
 ALGORITHMS: list[PathFinder] = [DijkstraPathFinder(), BellmanFordPathFinder(), BFSPathFinder()]
 
@@ -167,6 +174,54 @@ class TestTopologyLoaders(unittest.TestCase):
         self.assertAlmostEqual(w_rtt, 3.36)
         self.assertNotEqual(w_rtt, w_inv)
         self.assertNotEqual(w_inv, w_tp)
+
+
+class TestLiveApiLoader(unittest.TestCase):
+    """A small hand-built fixture matching REIN console's GET /api/testbed
+    shape - exercises load_from_console_api() deterministically, without
+    needing a live lft-vm/ONOS/console stack up just to run the test suite.
+    The real validation against an actually-running testbed is in
+    FINDINGS.md's "Live-data validation" section.
+    """
+
+    def fixture(self) -> dict:
+        return {
+            "nodes": [
+                {"id": "s0", "kind": "switch", "desc": "AC"},
+                {"id": "s1", "kind": "switch", "desc": "RO"},
+                {"id": "s2", "kind": "switch", "desc": "AM"},
+                {"id": "cl0", "kind": "host", "ip": "192.168.0.5", "sw": "s0"},
+            ],
+            "links": [
+                {"a": "s0", "b": "s1", "now": {"delay": 3.51, "rate": 100.0, "loss": 0, "down": False}},
+                {"a": "s1", "b": "s2", "now": {"delay": 5.0, "rate": 50.0, "loss": 0, "down": False}},
+                # a down link must be skipped entirely, not just zero-weighted
+                {"a": "s0", "b": "s2", "now": {"delay": 1.0, "rate": 10.0, "loss": 0, "down": True}},
+                # a host-facing link (cl0 isn't a switch) must also be skipped
+                {"a": "s0", "b": "cl0", "now": {"delay": 0.5, "rate": 1000.0, "loss": 0, "down": False}},
+            ],
+        }
+
+    def test_builds_switch_only_graph_with_desc_names(self):
+        g = load_from_console_api(self.fixture(), cost="delay")
+        self.assertEqual(g.nodes, {"AC", "RO", "AM"})
+        self.assertEqual(g.num_edges, 2)  # the down link and the host link are both excluded
+
+    def test_cost_modes(self):
+        delay = load_from_console_api(self.fixture(), cost="delay")
+        rate = load_from_console_api(self.fixture(), cost="rate")
+        w_delay = next(w for a, b, w in delay.edges() if {a, b} == {"AC", "RO"})
+        w_rate = next(w for a, b, w in rate.edges() if {a, b} == {"AC", "RO"})
+        self.assertAlmostEqual(w_delay, 3.51)
+        self.assertAlmostEqual(w_rate, 100.0)
+
+    def test_algorithms_run_unchanged_against_it(self):
+        g = load_from_console_api(self.fixture(), cost="delay")
+        for algo in ALGORITHMS:
+            with self.subTest(algorithm=algo.name):
+                r = algo.find_path(g, "AC", "AM")
+                self.assertTrue(r.reachable)
+                self.assertEqual(r.path, ["AC", "RO", "AM"])  # the only path left once AC-AM is down
 
 
 class TestRandomGraph(unittest.TestCase):
