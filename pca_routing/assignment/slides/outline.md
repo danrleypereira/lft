@@ -37,6 +37,15 @@ material pointers are what to pull onto each slide, not what to say.
     every instance tested (`tests/test_algorithms.py`); frame this as a
     *result*, not a testing footnote — it's evidence the two
     implementations are correct relative to each other.
+11a. **Validated live, not just on paper** — pulled the real running
+    topology straight from REIN's console API (`GET /api/testbed`) while an
+    actual `rnp` experiment was up in the isolated VM - ONOS, 27 switches,
+    deployer and supervisor all live - and ran all three algorithms against
+    it with *zero code changes*, only a new loader. Found an even subtler
+    divergence than the static example: BA→RJ ties at 2 hops either way,
+    but BFS's tied pick costs 2.4× more (35ms vs. 14.43ms) — hop count alone
+    can't even break its own ties well. `FINDINGS.md` → "Live-data
+    validation".
 12. **Real-world application** — this isn't a toy problem: REIN (the real
     IBN research project this data comes from) has an open issue asking for
     exactly this function, and its current solver turns out to be
