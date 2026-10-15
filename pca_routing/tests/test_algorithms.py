@@ -119,7 +119,7 @@ class TestDijkstraBellmanFordAgree(unittest.TestCase):
                 self.assertAlmostEqual(dij.cost, bf.cost, msg=f"{s}->{t}")
 
     def test_on_rnp_topology(self):
-        g = load_rnp_topology(cost="inverse_capacity")
+        g = load_rnp_topology(cost="rtt")
         pairs = [("ES", "AC"), ("RJ", "RR"), ("SP", "TO"), ("BA", "RS")]
         for s, t in pairs:
             dij = DijkstraPathFinder().find_path(g, s, t)
@@ -146,21 +146,27 @@ class TestTopologyLoaders(unittest.TestCase):
 
     def test_rnp_shape(self):
         g = load_rnp_topology()
-        self.assertEqual(g.num_nodes, 30)
-        self.assertEqual(g.num_edges, 50)
+        self.assertEqual(g.num_nodes, 27)
+        self.assertEqual(g.num_edges, 44)
 
     def test_rnp_cost_modes_differ(self):
-        inv = load_rnp_topology(cost="inverse_capacity")
-        cap = load_rnp_topology(cost="capacity")
-        # AL<->PE is a real 40gbit link: 1/40 under inverse_capacity vs. 40
-        # under capacity - these must differ (a 1gbit edge would trivially
-        # give 1/1 == 1 under both modes, which is what tripped this test up
-        # the first time).
+        rtt = load_rnp_topology(cost="rtt")
+        inv = load_rnp_topology(cost="inverse_throughput")
+        tp = load_rnp_topology(cost="throughput")
+        # AL<->PE: real values are 100mbit (both directions) and ~3.3ms RTT -
+        # three different weights for the same edge depending on cost mode,
+        # none of which should coincide (a 1mbit edge would trivially give
+        # 1/1 == 1 under both throughput modes, which is what tripped this
+        # test up the first time, before RTT_MATRIX existed, against AL-PE's
+        # old 40gbit value).
+        w_rtt = next(w for a, b, w in rtt.edges() if {a, b} == {"AL", "PE"})
         w_inv = next(w for a, b, w in inv.edges() if {a, b} == {"AL", "PE"})
-        w_cap = next(w for a, b, w in cap.edges() if {a, b} == {"AL", "PE"})
-        self.assertAlmostEqual(w_inv, 1 / 40)
-        self.assertAlmostEqual(w_cap, 40.0)
-        self.assertNotEqual(w_inv, w_cap)
+        w_tp = next(w for a, b, w in tp.edges() if {a, b} == {"AL", "PE"})
+        self.assertAlmostEqual(w_tp, 100.0)
+        self.assertAlmostEqual(w_inv, 1 / 100)
+        self.assertAlmostEqual(w_rtt, 3.36)
+        self.assertNotEqual(w_rtt, w_inv)
+        self.assertNotEqual(w_inv, w_tp)
 
 
 class TestRandomGraph(unittest.TestCase):

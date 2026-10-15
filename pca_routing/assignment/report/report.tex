@@ -79,10 +79,12 @@
 % count, BFS's path) - this section can mostly transcribe that file plus a
 % figure of the 4-node graph.
 
-\subsection{The real 30-node instance}
+\subsection{The real 27-node instance}
 % TODO: material in pca_routing/assignment/data/rnp_instance.md - the real
-% RNP backbone, the ES->AC and RJ->RR queries where BFS and Dijkstra
-% genuinely disagree on a real instance (not just the textbook example).
+% RNP backbone with real measured RTT. ES->AC: all three algorithms agree
+% (good to show not every pair diverges). RJ->RR: BFS and Dijkstra/
+% Bellman-Ford genuinely disagree on real measured latency (not just the
+% textbook example) - BFS's fewer-hop path is 47% SLOWER. Lead with this one.
 
 \subsection{Complexity}
 % TODO: transcribe pca_routing/assignment/complexity/complexity-table.md -

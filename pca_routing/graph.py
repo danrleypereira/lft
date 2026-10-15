@@ -92,19 +92,39 @@ def load_diamond_topology() -> Graph:
     return g
 
 
-def load_rnp_topology(cost: str = "inverse_capacity") -> Graph:
-    """The real 30-node RNP backbone from
-    onos_topologies/iperf_experiment/rnp_topology/constants.py.
+def _parse_ms(raw: str) -> float:
+    return float(raw.replace("ms", ""))
+
+
+def _parse_mbit(raw: str) -> float:
+    return float(raw.replace("mbit", ""))
+
+
+def load_rnp_topology(cost: str = "rtt") -> Graph:
+    """The real 27-node RNP backbone from
+    onos_topologies/topologies/configs/rnp.py (moved there by the
+    chore/reorganize-onos-topologies work merged into dash-experiments -
+    the old onos_topologies/iperf_experiment/rnp_topology/constants.py this
+    used to read no longer exists). That reorganization is also a genuine
+    upgrade for this assignment: the old file only had a capacity matrix
+    (no per-link delay at all); this one adds a real RTT_MATRIX measured on
+    the actual RNP backbone, so "rtt" below is now an honest latency cost,
+    not the inverse-capacity proxy the first version of this loader had to
+    use instead.
 
     `cost`:
-      - "inverse_capacity" (default): weight = 1 / capacity_gbit. Favors fat
-        pipes. This is a COST, not a latency - rnp_topology ships no per-link
-        delay matrix, only capacity, so never call this "latency" in the report.
-      - "capacity": weight = capacity_gbit directly (useful only for display;
-        meaningless to minimize, since a bigger number here is a FASTER link).
+      - "rtt" (default): weight = measured round-trip time in ms
+        (RTT_MATRIX). A genuine latency - minimize this for "lowest-latency
+        path," the textbook framing of the problem.
+      - "throughput": weight = capacity in mbit directly (useful for
+        display; meaningless to minimize, since a bigger number here is a
+        FASTER link, not a worse one).
+      - "inverse_throughput": weight = 1 / capacity_mbit. Favors fat pipes -
+        kept for comparison against the first version of this loader/report
+        draft, which used this before RTT_MATRIX existed.
       - "hops": weight = 1.0 for every edge (same graph BFS already walks).
     """
-    mod = _load_constants("onos_topologies/iperf_experiment/rnp_topology/constants.py")
+    mod = _load_constants("onos_topologies/topologies/configs/rnp.py")
     names = [p[0].replace("PoP-", "") for p in mod.POPS]
     n = len(names)
     g = Graph()
@@ -112,14 +132,15 @@ def load_rnp_topology(cost: str = "inverse_capacity") -> Graph:
         for j in range(i + 1, n):
             if not mod.ADJACENCY_MATRIX[i][j]:
                 continue
-            raw = mod.THROUGHPUT_MATRIX[i][j] or mod.THROUGHPUT_MATRIX[j][i] or "1gbit"
-            gbit = float(raw.replace("gbit", ""))
-            if cost == "capacity":
-                w = gbit
-            elif cost == "hops":
+            if cost == "hops":
                 w = 1.0
+            elif cost in ("throughput", "inverse_throughput"):
+                raw = mod.THROUGHPUT_MATRIX[i][j] or mod.THROUGHPUT_MATRIX[j][i]
+                mbit = _parse_mbit(raw)
+                w = mbit if cost == "throughput" else 1.0 / mbit
             else:
-                w = 1.0 / gbit
+                raw = mod.RTT_MATRIX[i][j] or mod.RTT_MATRIX[j][i]
+                w = _parse_ms(raw)
             g.add_edge(names[i], names[j], w)
     return g
 

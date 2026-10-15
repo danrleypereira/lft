@@ -96,14 +96,21 @@ Maps directly onto the assignment's required split: `graph.py` +
   (ES↔MG 10ms, ES↔RJ 30ms — the static bottleneck, MG↔SP 10ms, RJ↔SP 10ms) —
   not `diamond_topology/constants.py`'s `CONFIG`, which is a single uniform
   10ms/35mbit for every link before any experiment-specific `tc` rules run.
-- **`load_rnp_topology()`** — the real 30-node RNP backbone
-  (`rnp_topology/constants.py`), weight = `1/capacity_gbit` by default
-  (`cost="capacity"` and `cost="hops"` also available). This is a **cost**,
-  not a latency — the dataset ships no per-link delay matrix, only capacity,
-  and the report must not call it latency.
+- **`load_rnp_topology()`** — the real 27-node RNP backbone
+  (`onos_topologies/topologies/configs/rnp.py` — moved there, and
+  substantially improved, by the `chore/reorganize-onos-topologies` work
+  merged into `dash-experiments` after this package was first written),
+  weight = real measured RTT in ms by default (`RTT_MATRIX`,
+  `cost="rtt"`) — a genuine latency, not a proxy. `cost="throughput"` /
+  `"inverse_throughput"` (capacity in mbit, `THROUGHPUT_MATRIX`) and
+  `cost="hops"` are also available. Earlier drafts of this package used
+  `1/capacity` as a latency *proxy*, because the dataset available at the
+  time had no delay matrix at all — that caveat no longer applies now that
+  `RTT_MATRIX` exists; `"inverse_throughput"` is kept only for comparison
+  against those earlier results, not as the recommended cost.
 - **`random_graph(n, ...)`** — random connected graphs of controlled size,
   for `scaling_experiment` (`sizes=[10, 20, 30, 50, 100, 200, 500]` in
-  `experiment.main()`), since on the 4- or 30-node real graphs the measured
+  `experiment.main()`), since on the 4- or 27-node real graphs the measured
   runtime is mostly Python call overhead, not algorithmic work.
 
 ## Complexity (for the implementation actually here — not a textbook quote)

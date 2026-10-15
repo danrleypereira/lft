@@ -23,8 +23,9 @@ material pointers are what to pull onto each slide, not what to say.
 7. **Worked instance (diamond)** — the 4-node graph diagram + Dijkstra's
    `dist[]` table, pass by pass. `data/diamond_instance.md` has the full
    trace already written out; this slide is a visual compression of it.
-8. **Real instance (RNP, 30 nodes)** — the ES→AC query where BFS and
-   Dijkstra/Bellman-Ford disagree on a REAL topology, not a toy example.
+8. **Real instance (RNP, 27 nodes)** — the RJ→RR query, real measured RTT:
+   BFS's 3-hop path is 47% *slower* than Dijkstra/Bellman-Ford's 4-hop one
+   (144ms vs. 98ms) — disagreement on a REAL topology, not a toy example.
    `data/rnp_instance.md`.
 9. **Complexity** — the summary table (`complexity/complexity-table.md`),
    plus the one genuinely interesting finding: Dijkstra's best case is

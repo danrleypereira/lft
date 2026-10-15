@@ -82,7 +82,7 @@ def scaling_experiment(sizes: list[int], out_csv: Path, seed: int = 42) -> None:
     connected graph, run all three algorithms once, and log their counters -
     this is where Theta(V^2) (Dijkstra) vs. the early-terminating Theta(VE)
     worst case (Bellman-Ford) vs. Theta(V+E) (BFS) actually shows up in
-    practice, since on the 4-node diamond or even the 30-node RNP graph the
+    practice, since on the 4-node diamond or even the 27-node RNP graph the
     runtime is mostly Python call overhead, not algorithmic work.
     """
     rows = []
@@ -112,8 +112,8 @@ def main() -> int:
     diamond = load_diamond_topology()
     print_suite("diamond_topology", diamond, "ES", "SP")
 
-    # 2) the real 30-node RNP backbone, cost = 1/capacity
-    rnp = load_rnp_topology(cost="inverse_capacity")
+    # 2) the real 27-node RNP backbone, cost = measured RTT (ms)
+    rnp = load_rnp_topology(cost="rtt")
     print_suite("rnp_topology", rnp, "ES", "AC")
     print_suite("rnp_topology", rnp, "RJ", "RR")
 
