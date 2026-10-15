@@ -203,6 +203,30 @@ constraints), with the deployer's own policy choosing between them
 once concurrent active flows cross some threshold) - a decision for
 whoever owns `cdn_qoe.py` to weigh in on, not something to build silently.
 
+**The complexity-theory anchor, precisely stated.** It's worth being exact
+about what result is being invoked above, rather than waving at "NP-hard"
+in general: Even, Itai, and Shamir (1976) proved that the **integral
+two-commodity flow problem is NP-complete**, in both the directed and
+undirected case, with as few as **two** commodities.¹ Two clients, not
+ten, is already enough — once paths can't be split, a shared-capacity
+constraint is sufficient on its own to leave polynomial territory. The
+companion fact that makes this a genuinely teachable contrast, not just a
+"things get hard" story: the **splittable** (fractional) version of the
+same problem — a client's traffic may be divided across several paths —
+is a linear program, solvable in polynomial time. So the jump to NP-hard
+is caused by exactly one requirement (*one whole path per client*), not by
+"more than one client" on its own, and not by the cost function or graph
+size. Structurally, this is also *why* Dijkstra specifically can't be
+patched for it: its greedy-choice correctness proof depends on every edge
+weight being fixed and decision-independent before the algorithm starts;
+a second commodity's path choice makes a given edge's effective
+availability for the first commodity depend on a decision made *during*
+the same solve, which is exactly the invariant Dijkstra's proof assumes
+away. A full worked version of this argument — written as a standalone
+teaching note, with the citation above and worked contrast against the
+splittable case — lives in
+[`assignment/complexity/why-np-hard.md`](assignment/complexity/why-np-hard.md).
+
 ## Honest verdict
 
 Not "just useful for the assignment" and not "a ready-to-merge replacement"
@@ -218,3 +242,9 @@ topology loader (cleaner than the Karaf-CLI-scraping approach, not just a
 port of it), the multi-target wrapper, and signoff from whoever owns
 `cdn_qoe.py` on the
 single-vs-multi-commodity question above.
+
+---
+
+¹ S. Even, A. Itai, A. Shamir, "On the Complexity of Timetable and
+Multicommodity Flow Problems," *SIAM Journal on Computing*, 5(4):691–703,
+1976.

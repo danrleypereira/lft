@@ -65,6 +65,22 @@ material pointers are what to pull onto each slide, not what to say.
     signature, different return shape) — it's a separate interface one
     level up, exactly the discipline `algorithms/base.py` already argues
     for.
+13a. **Why this is provably hard, not just "harder"** — the precise CS
+    result, not a hand-wave: Even, Itai & Shamir (1976) proved the
+    *integral* two-commodity flow problem is NP-complete with as few as
+    TWO commodities; the *splittable* (fractional) version of the exact
+    same problem is a linear program — solvable in polynomial time. One
+    requirement (a client's traffic must be ONE undivided path) is the
+    entire reason the problem leaves P. Tie this to why Dijkstra
+    specifically can't be patched: its greedy-choice proof needs every
+    edge weight fixed and decision-independent before it starts; a second
+    commodity's choice makes an edge's effective availability depend on a
+    decision made *during* the same solve — exactly the assumption the
+    proof relies on. Full writeup: `assignment/complexity/why-np-hard.md`
+    (also delivered as a standalone PDF). Close with the general lesson:
+    sharing one resource across otherwise-independent subproblems is what
+    moves a problem between complexity classes — not problem size, not a
+    messier cost function.
 14. **Conclusion** — what was learned, what was hard. Last slide.
 
 ## Format
