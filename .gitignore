@@ -37,5 +37,10 @@ profissa_lft.egg-info
 __pycache__/
 *.py[cod]
 .pytest_cache/
-.venv
 dependencies.log
+
+# uv
+.venv/
+
+# pca_routing coursework scratch
+pca_routing/**/__pycache__/

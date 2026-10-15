@@ -1,0 +1,141 @@
+% Skeleton only - structure and pointers to source material, not written content.
+% Compile with: pdflatex report.tex && bibtex report && pdflatex report.tex && pdflatex report.tex
+% (not test-compiled here - no LaTeX toolchain on this machine; check it builds
+% once one is available, before relying on this structure.)
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+
+\lstset{
+  basicstyle=\ttfamily\small,
+  breaklines=true,
+  frame=single,
+  numbers=left,
+  numberstyle=\tiny,
+  columns=flexible,
+  backgroundcolor=\color{gray!8},
+}
+
+\title{%
+  % TODO: name of the problem per the assignment's cover requirement, e.g.:
+  Shortest-Path Routing in Real Network Topologies: \\
+  A Comparative Analysis of Dijkstra and Bellman--Ford using LFT
+}
+\author{%
+  % TODO: group member names (cover requirement)
+  TODO Name 1 \and TODO Name 2
+}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+% ---------------------------------------------------------------------------
+\section{Introduction}
+% TODO: problem description + technique overview. Material to draw from:
+%   - pca_routing/DESIGN.md - "The problem", "Why Dijkstra vs. Bellman-Ford,
+%     not BFS vs. Dijkstra" (the key framing decision - explain it here)
+%   - /home/tupan/Documents/PCA/literature-references.md - the chain from
+%     Bellman/Dijkstra/Moore -> OSPF/RIP -> SDN -> IBN/REIN, for motivating
+%     why this is a real networking problem, not an exercise with networking
+%     painted on afterward.
+% Cite \cite{bellman1958}, \cite{dijkstra1959}, \cite{moore1959} as the
+% required literature; \cite{rfc2328}, \cite{rfc2453} as supporting evidence
+% (protocol specs, not substitutes for the three articles above).
+
+% ---------------------------------------------------------------------------
+\section{Implementation}
+
+\subsection{Design technique}
+% TODO: explain the technique per algorithm -
+%   Dijkstra = greedy (locally optimal choice: always extend the shortest
+%     known path first); Bellman-Ford = dynamic programming (pass k holds the
+%     best distance using at most k edges, built from pass k-1); BFS = graph
+%     traversal. Source: pca_routing/DESIGN.md, "Liskov Substitution
+%     Principle, applied directly" section explains the shared interface
+%     that lets all three be swapped in one line (experiment.py:25).
+
+\subsection{Pseudocode}
+% TODO: pseudocode for Dijkstra and Bellman-Ford (and BFS if space allows).
+% Can be lifted near-verbatim from pca_routing/algorithms/dijkstra.py and
+% bellman_ford.py - they're already short and close to pseudocode. Example
+% \lstlisting block:
+\begin{lstlisting}[language=Python, caption={Dijkstra (array-based selection), from algorithms/dijkstra.py}]
+% TODO: paste the real implementation here
+\end{lstlisting}
+
+\subsection{Test instance}
+% TODO: the diamond topology worked example, traced by hand step by step.
+% Material: pca_routing/assignment/data/diamond_instance.md has the full
+% hand-trace (Dijkstra's dist[] table pass by pass, Bellman-Ford's pass
+% count, BFS's path) - this section can mostly transcribe that file plus a
+% figure of the 4-node graph.
+
+\subsection{The real 30-node instance}
+% TODO: material in pca_routing/assignment/data/rnp_instance.md - the real
+% RNP backbone, the ES->AC and RJ->RR queries where BFS and Dijkstra
+% genuinely disagree on a real instance (not just the textbook example).
+
+\subsection{Complexity}
+% TODO: transcribe pca_routing/assignment/complexity/complexity-table.md -
+% best/worst/average case per algorithm, derived from the actual code (not
+% a textbook quote), including why Dijkstra's best case is Theta(V), not
+% Theta(1) (confirmed empirically, see that file).
+
+\begin{table}[h]
+\centering
+\begin{tabular}{lrrr}
+\toprule
+Algorithm & Best & Worst & Average \\
+\midrule
+Dijkstra (array) & $\Theta(V)$ & $\Theta(V^2)$ & $\Theta(V^2)$ \\
+Bellman-Ford (+ early term.) & $\Theta(E)$ & $\Theta(VE)$ & $\Theta(kE)$ \\
+BFS & $\Theta(1)$ & $\Theta(V+E)$ & $\Theta(V+E)$ \\
+\bottomrule
+\end{tabular}
+\caption{Complexity of the implementations in \texttt{pca\_routing/algorithms/}.}
+\end{table}
+
+\subsection{Results and response-time measurements}
+% TODO: figures already generated in pca_routing/assignment/figures/ -
+% time_vs_n.png, comparisons_vs_n.png, relaxations_vs_n.png - from real runs
+% over random_graph(n) for n in {10,20,30,50,100,200,500}
+% (pca_routing/assignment/data/scaling.csv has the raw numbers).
+\begin{figure}[h]
+  \centering
+  \includegraphics[width=0.8\textwidth]{../figures/comparisons_vs_n.png}
+  \caption{Algorithmic work (comparisons) vs. graph size - TODO: discuss}
+  \label{fig:comparisons}
+\end{figure}
+
+% TODO: discuss the correctness oracle (Dijkstra.cost == Bellman-Ford.cost
+% on every instance tested, see pca_routing/tests/test_algorithms.py) as a
+% result in its own right, not just a testing detail - it's evidence the two
+% implementations are correct relative to each other.
+
+% ---------------------------------------------------------------------------
+\section{Members}
+% TODO: who did what. Required by the assignment even for a solo submission
+% (state so explicitly if solo).
+
+% ---------------------------------------------------------------------------
+\section{Conclusion}
+% TODO: general comments + main difficulties. One honest thing worth
+% including: the Dijkstra best-case complexity was first written down wrong
+% (Theta(V^2)) and only caught by checking it against the actual code rather
+% than reasoning about the algorithm in the abstract - worth a sentence on
+% why "the complexity of your implementation, not a textbook's" (the
+% assignment's own words) matters.
+
+\bibliographystyle{plain}
+\bibliography{refs}
+
+\end{document}
