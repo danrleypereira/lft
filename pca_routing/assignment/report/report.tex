@@ -35,7 +35,7 @@
   on the RNP Backbone}
 \author{Group 7 --- ``IBN Mess'' \\
   Danrley Pereira (enrollment 262111848) \and
-  Gabriel Faria (enrollment TBD) \and
+  Gabriel Faria (enrollment 262112522) \and
   Hugo Pereira Rezende (enrollment 170144658)}
 \date{October 2026}
 
@@ -77,8 +77,9 @@ Graphs'' \cite{dijkstra1959}, a \emph{greedy} method. The required comparison is
 \textbf{Bellman--Ford}, from Bellman's ``On a Routing Problem'' \cite{bellman1958}, a
 \emph{dynamic-programming} method based on repeated relaxation. As an extra, explicitly
 labelled baseline we implement \textbf{breadth-first search} (BFS), from Moore's ``The
-Shortest Path Through a Maze'' \cite{moore1959}, which minimizes hop count and is
-the behaviour of ONOS's default path service.
+Shortest Path Through a Maze'' \cite{moore1959}, which minimizes hop count. ONOS's default
+path service does not run BFS: it runs Dijkstra with weight~1 on every link, which yields the
+same minimum hop count (Section~\ref{sec:relevance}).
 
 \paragraph{Why Dijkstra versus Bellman--Ford, and not BFS versus Dijkstra.}
 The first idea for this project was to compare BFS and Dijkstra. That is a good
@@ -292,7 +293,10 @@ BFS & $\Theta(1)$ & $\Theta(V+E)$ & $\Theta(V+E)$ & $\Theta(V)$ \\
 
 A heap-based Dijkstra would give $O((V+E)\log V)$ and would change the comparison with
 Bellman--Ford on sparse graphs (Section~\ref{sec:scaling}); we did not implement it, because the
-array version is the cleaner object of study. It is left as a natural extension.
+array version is the cleaner object of study. It is left as a natural extension. For
+reference, ONOS's own Dijkstra keeps its frontier in a priority queue but rebuilds the whole
+heap on every iteration (a full $\Theta(V)$ \texttt{heapify()} per extraction), so, by our reading of the
+source, its effective cost is also $\Theta(V^2)$.
 
 \subsection{Test instance 1: the diamond, traced by hand}
 \label{sec:diamond}
@@ -510,14 +514,18 @@ Each algorithm here corresponds to something real in the stack (Table~\ref{tab:m
 \toprule
 Algorithm & Corresponds to \\
 \midrule
-BFS & ONOS's default hop-count path service, used by the deployer's middlebox chaining and by the \texttt{fwd} mode \\
-Dijkstra & what the \texttt{ospf} mode already does (RFC 2328 \cite{rfc2328}), and what the \texttt{cdn\_qoe.py} ILP is provably equivalent to, per target \\
+BFS & the same result as ONOS's default hop-count path (which is Dijkstra with weight~1 per link), used by the deployer's middlebox chaining and by the \texttt{fwd} mode \\
+Dijkstra & the algorithm ONOS itself runs in \texttt{getPaths}; also what the \texttt{ospf} mode already does (RFC 2328 \cite{rfc2328}), and what the \texttt{cdn\_qoe.py} ILP is provably equivalent to, per target \\
 Bellman--Ford & the required literature comparison; not currently used in REIN \\
 \bottomrule
 \end{tabular}
 \caption{Where each algorithm appears in the existing stack.}
 \label{tab:mapping}
 \end{table}
+
+So the platform already uses the right algorithm; what goes wrong in the RJ $\to$ RR example is the default weight
+(1 per link), not the algorithm. ONOS's \texttt{getPaths} has an overload that takes a \texttt{LinkWeigher}, so supplying a
+weigher based on measured RTT would make it minimize latency, as Dijkstra does here.
 
 \paragraph{Caveats, stated plainly.}
 The equivalence holds for the code \emph{as it stands}: one client's flow at a time, no shared link-capacity constraint across
@@ -615,7 +623,7 @@ $\sum \text{flow}(i,j)\le \text{capacity}(i,j)$ constraints, with the deployer's
 \label{sec:members}
 
 This work was developed by Group 7, ``IBN Mess'', whose members are Danrley Pereira (enrollment 262111848),
-Gabriel Faria (enrollment TBD) and Hugo Pereira Rezende (enrollment 170144658). The three members developed the
+Gabriel Faria (enrollment 262112522) and Hugo Pereira Rezende (enrollment 170144658). The three members developed the
 algorithms, the experiment code, the tests, the analysis and this report together, and each member knows and
 can explain every part of the code, as the assignment requires.
 % TODO(group): add the per-member breakdown of activities the assignment asks for, once the members state who did what.
